@@ -1,0 +1,58 @@
+PANDUAN PENJELASAN TUGAS VUE.JS - SISTEM SITTA UT
+=================================================
+Dokumen ini merangkum mapping antara kriteria penilaian tugas dengan implementasi kode. 
+Gunakan panduan ini untuk membantu menjelaskan kode saat perekaman video presentasi.
+
+1. ORGANISASI KODE (Struktur Folder & Pemisahan Logika)
+-------------------------------------------------
+- Struktur Folder: File utama (index.html, stok.html, tracking.html) diletakkan di root folder. Semua skrip JS diletakkan rapi di folder "js/" dan styling di "css/".
+- Pemisahan Logika: Saya menggunakan 1 instance Vue spesifik per halaman untuk mencegah tabrakan data.
+  * Halaman Stok di-handle oleh file: js/stok-app.js
+  * Halaman Tracking di-handle oleh file: js/tracking-app.js
+  * Data global terpusat di file: js/dataBahanAjar.js
+
+2. DISPLAY DATA (mustaches, v-text, v-html)
+-------------------------------------------------
+- Mustaches ({{ }}): Digunakan secara masif untuk rendering text biasa. 
+  Contoh: Di file stok.html (baris ~160) ada {{ item.kode }} dan {{ item.judul }}.
+- v-html: Dipakai khusus untuk menampilkan string yang mengandung elemen HTML asli (seperti tag <em>, <strong>, <u>). 
+  Contoh: Di file stok.html (baris ~184) pada tabel kolom catatan menggunakan syntax <td v-html="item.catatanHTML"></td>.
+
+3. DATA BINDING (v-bind, v-model)
+-------------------------------------------------
+- v-model (Two-way binding): Digunakan untuk semua input Form dan Filter agar data di UI sinkron dengan Vue State.
+  Contoh: Di stok.html pada input pencarian/filter <select v-model="filter.selectedUpbjj"> dan form input <input type="text" v-model="formTambah.kode">.
+- v-bind (One-way binding): Dipakai untuk manipulasi atribut HTML dinamis (Sering ditulis dengan shorthand ':').
+  Contoh: Di stok.html (baris ~88) pada tombol submit <button :disabled="!isFormValid"> dan di tabel status stok <span :class="getStatusClass(item)">.
+
+4. CONDITIONAL RENDERING (v-if, v-else, v-show)
+-------------------------------------------------
+- v-show: Digunakan untuk toggle buka/tutup Form Tambah Stok (stok.html baris ~34) karena elemen ini sangat sering di klik, v-show hanya memanipulasi CSS 'display' tanpa menghapus DOM (lebih ringan).
+- v-if, v-else-if, v-else: Digunakan pada Badge Status tabel (stok.html baris ~177-179) untuk merender teks Aman, Menipis, atau Kosong secara kondisional sesuai perbandingan qty dan safety stok.
+
+5. PROPERTY: COMPUTED vs METHODS
+-------------------------------------------------
+(KRUSIAL: Sesuai aturan tugas, filter harus di computed agar ter-cache dan efisien)
+- Computed: Semua logika Filter Data dan Sorting diletakkan di dalam computed property bernama "filteredStok()" di js/stok-app.js (baris ~43). Karena menggunakan computed, Vue tidak perlu me-recompute jika data array-nya tidak berubah.
+- Methods: Digunakan untuk logika "Action" yang berjalan tiap kali dipanggil. Contohnya fungsi "validateForm()" dan "submitForm()" di js/stok-app.js (baris ~130 dan ~207).
+
+6. WATCHER (Minimal 2 Watcher Aktif)
+-------------------------------------------------
+- Watcher 1: Berada di js/stok-app.js (baris ~105) pada state 'filter.selectedUpbjj'. Fungsinya untuk me-reset otomatis nilai dropdown Kategori ketika pilihan UT-Daerah (UPBJJ) diubah oleh user.
+- Watcher 2: Berada di js/tracking-app.js (baris ~50) pada state 'form.paketKode'. Fungsinya sangat penting: ketika form Paket diklik, watcher ini akan me-lookup isi paket tersebut lalu secara otomatis mengambil detail judul buku & menentukan Total Harga DO (this.form.total).
+
+7. LIST RENDERING & FORM VALIDASI SEDERHANA
+-------------------------------------------------
+- List Rendering: Menggunakan direktif v-for untuk melooping tabel. 
+  Contoh: Di stok.html <tr v-for="(item, index) in filteredStok">.
+- Form Validasi Sederhana: Diterapkan validasi custom Vue pada input.
+  Contoh: Validasi kode buku alphanumeric di js/stok-app.js (baris ~140) dan validasi ketat NIM wajib 9 digit angka (Regex: /^[0-9]{9}$/) di js/tracking-app.js (baris ~100). Event form submit dicegah dari auto-refresh menggunakan <form @submit.prevent="submitForm">.
+
+8. POIN-POIN KRUSIAL SOAL LAINNYA
+-------------------------------------------------
+- Dependent Options: Dropdown filter Kategori di stok.html dibungkus dengan <div v-if="filter.selectedUpbjj">, sehingga secara UI, select Kategori tersebut baru akan "Muncul" di layar SETELAH dropdown UT-Daerah (UPBJJ) dipilih.
+- Status Stok 3 Warna: Menggunakan dynamic class binding via "getStatusClass()" di js/stok-app.js (baris ~129) yang mereturn nama class 'status-kosong', 'status-menipis', atau 'status-aman'. Warna-warna ini diatur lewat CSS.
+- Nomor DO Auto-Generate Format DO{tahun}-{seq 3 digit}: Diatur di js/tracking-app.js melalui Computed Property bernama "generateNoDO()" (baris ~36), yang menghitung jumlah array pesanan di tahun saat ini dan menambahkan string padding 3 digit (contoh: DO2025-001).
+- Detail Paket Muncul & Harga Otomatis: Di-trigger oleh Watcher 2 (js/tracking-app.js) dan dirender datanya lewat array "detailPaketTerpilih" menggunakan v-for di halaman tracking.html.
+
+Selamat Menyelesaikan Tugas & Membuat Video Presentasi!

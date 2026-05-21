@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Stok - SITTA </title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.js"></script>
+</head>
+
+<body>
+    <div id="stokApp" class="container">
+        <!-- Modern Navbar -->
+        <header>
+            <div class="title">
+                <div class="title-logo">SITTA</div>
+                <h1>Manajemen Stok</h1>
+            </div>
+            <nav class="nav-links">
+                <a href="index.html">Beranda</a>
+                <a href="stok.html" class="active">Manajemen Stok</a>
+                <a href="tracking.html">Tracking DO</a>
+            </nav>
+        </header>
+
+        <!-- Split Layout -->
+        <div class="layout-split">
+            <!-- SISI KIRI: INPUT & FILTER -->
+            <div class="layout-left">
+                <!-- Panel Tambah Data -->
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="section-title" style="margin-bottom: 1rem; padding-bottom: 0.5rem;">
+                        <h3>➕ Tambah Bahan Ajar</h3>
+                        <button @click="showForm = !showForm" class="btn btn-secondary btn-sm">
+                            {{ showForm ? 'Tutup' : 'Buka' }}
+                        </button>
+                    </div>
+
+                    <form v-show="showForm" @submit.prevent="submitForm">
+                        <div class="form-group">
+                            <label>Kode MK</label>
+                            <input type="text" v-model="formTambah.kode" class="form-control"
+                                placeholder="Contoh: EKMA4116">
+                            <div v-if="errors.kode" class="error-message">{{ errors.kode }}</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Judul Buku</label>
+                            <input type="text" v-model="formTambah.judul" class="form-control"
+                                placeholder="Contoh: Manajemen">
+                            <div v-if="errors.judul" class="error-message">{{ errors.judul }}</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Kategori</label>
+                            <select v-model="formTambah.kategori" class="form-control">
+                                <option value="">-- Pilih Kategori --</option>
+                                <option v-for="kat in kategoriList" :key="kat" :value="kat">{{ kat }}</option>
+                            </select>
+                            <div v-if="errors.kategori" class="error-message">{{ errors.kategori }}</div>
+                        </div>
+                        <div class="form-group">
+                            <label>UPBJJ</label>
+                            <select v-model="formTambah.upbjj" class="form-control">
+                                <option value="">-- Pilih UPBJJ --</option>
+                                <option v-for="u in upbjjList" :key="u" :value="u">{{ u }}</option>
+                            </select>
+                            <div v-if="errors.upbjj" class="error-message">{{ errors.upbjj }}</div>
+                        </div>
+                        <div class="grid-cols-2" style="gap: 1rem;">
+                            <div class="form-group">
+                                <label>Qty</label>
+                                <input type="number" v-model.number="formTambah.qty" class="form-control">
+                                <div v-if="errors.qty" class="error-message">{{ errors.qty }}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Safety Stok</label>
+                                <input type="number" v-model.number="formTambah.safety" class="form-control">
+                                <div v-if="errors.safety" class="error-message">{{ errors.safety }}</div>
+                            </div>
+                        </div>
+                        <div class="info-text" style="margin-top: -10px; margin-bottom: 15px;">
+                            Saran sistem untuk safety: {{ suggestedSafety }}
+                        </div>
+                        <div class="grid-cols-2" style="gap: 1rem;">
+                            <div class="form-group">
+                                <label>Harga (Rp)</label>
+                                <input type="number" v-model.number="formTambah.harga" class="form-control">
+                                <div v-if="errors.harga" class="error-message">{{ errors.harga }}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Lokasi Rak</label>
+                                <input type="text" v-model="formTambah.lokasiRak" class="form-control"
+                                    placeholder="A1-01">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Catatan HTML</label>
+                            <input type="text" v-model="formTambah.catatanHTML" class="form-control"
+                                placeholder="<strong>Buku Baru</strong>">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1rem;">
+                            Simpan Data
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Panel Filter -->
+                <div class="card filter-panel">
+                    <div class="section-title" style="margin-bottom: 1rem; border-bottom: none;">
+                        <h3>🔍 Filter & Sort</h3>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Filter UPBJJ</label>
+                        <select v-model="filter.selectedUpbjj" class="form-control">
+                            <option value="">Semua UPBJJ</option>
+                            <option v-for="u in upbjjList" :key="'filter-u-'+u" :value="u">{{ u }}</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" v-if="filter.selectedUpbjj">
+                        <label>Filter Kategori</label>
+                        <select v-model="filter.selectedKategori" class="form-control">
+                            <option value="">Semua Kategori</option>
+                            <option v-for="kat in kategoriList" :key="'filter-k-'+kat" :value="kat">{{ kat }}</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group checkbox-group" style="margin-top: 1rem; margin-bottom: 1.5rem;">
+                        <input type="checkbox" id="chkKritis" v-model="filter.hanyaKritis">
+                        <label for="chkKritis" style="margin: 0; color: var(--danger-text);">Hanya Stok Kritis</label>
+                    </div>
+
+                    <div class="grid-cols-2" style="gap: 0.5rem; margin-bottom: 1rem;">
+                        <div class="form-group">
+                            <label>Sort By</label>
+                            <select v-model="filter.sortBy" class="form-control">
+                                <option value="judul">Judul</option>
+                                <option value="qty">Qty</option>
+                                <option value="harga">Harga</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Order</label>
+                            <select v-model="filter.sortOrder" class="form-control">
+                                <option value="asc">A-Z / Naik</option>
+                                <option value="desc">Z-A / Turun</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button @click="resetFilter" class="btn btn-secondary btn-block">Reset Filter</button>
+                </div>
+            </div>
+
+            <!-- SISI KANAN: OUTPUT / TABEL -->
+            <div class="layout-right">
+                <div class="table-wrapper">
+                    <div class="section-title" style="padding: 1.5rem 1.5rem 0 1.5rem; margin-bottom: 0; border: none;">
+                        <h3>📋 Daftar Stok ({{ filteredStok.length }} item)</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Kode / Judul</th>
+                                    <th>Lokasi</th>
+                                    <th>Kategori</th>
+                                    <th>Harga</th>
+                                    <th>Stok</th>
+                                    <th>Status</th>
+                                    <th>Catatan</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, index) in filteredStok" :key="item.kode + '-' + item.upbjj">
+                                    <td>
+                                        <div style="font-weight: 600; color: var(--primary);">{{ item.kode }}</div>
+                                        <div style="font-size: 0.85rem; color: var(--text-muted);">{{ item.judul }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>{{ item.upbjj }}</div>
+                                        <div style="font-size: 0.75rem; color: var(--text-muted);">Rak: {{
+                                            item.lokasiRak }}</div>
+                                    </td>
+                                    <td>{{ item.kategori }}</td>
+                                    <td>Rp {{ item.harga.toLocaleString('id-ID') }}</td>
+
+                                    <!-- Mode Edit vs View -->
+                                    <td v-if="editIndex !== index">
+                                        <span style="font-weight: 600;">{{ item.qty }}</span>
+                                        <div style="font-size: 0.75rem; color: var(--text-muted);">S: {{ item.safety }}
+                                        </div>
+                                    </td>
+                                    <td v-else>
+                                        <div style="margin-bottom: 0.5rem;">
+                                            <input type="number" v-model.number="editForm.qty" class="edit-input"
+                                                title="Qty">
+                                        </div>
+                                        <div>
+                                            <input type="number" v-model.number="editForm.safety" class="edit-input"
+                                                title="Safety">
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <span class="status-badge" :class="getStatusClass(item)">
+                                            <span v-if="item.qty >= item.safety">Aman ✓</span>
+                                            <span v-else-if="item.qty > 0 && item.qty < item.safety">Menipis ⚠</span>
+                                            <span v-else-if="item.qty === 0">Kosong ✕</span>
+                                        </span>
+                                    </td>
+
+                                    <td v-html="item.catatanHTML"></td>
+
+                                    <td>
+                                        <div class="actions" v-if="editIndex !== index">
+                                            <button @click="startEdit(index, item)"
+                                                class="btn btn-secondary btn-sm">Edit</button>
+                                        </div>
+                                        <div class="actions" v-else style="flex-direction: column;">
+                                            <button @click="saveEdit(index)"
+                                                class="btn btn-primary btn-sm">Simpan</button>
+                                            <button @click="cancelEdit" class="btn btn-secondary btn-sm">Batal</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr v-if="filteredStok.length === 0">
+                                    <td colspan="8"
+                                        style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                                        <i>Data tidak ditemukan. Silakan sesuaikan filter Anda.</i>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/dataBahanAjar.js"></script>
+    <script src="js/stok-app.js"></script>
+</body>
+
+</html>
